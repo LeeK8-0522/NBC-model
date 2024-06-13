@@ -174,21 +174,43 @@ def predict(words, prior, likelihood):
     else:
         return 'N'
 
-def calculate_accuracy(tokens, prior, likelihood):
+def measure_performance(tokens, prior, likelihood):
     correct_cnt = 0
     total_cnt = 0
 
+    true_positive = 0
+    true_negative = 0
+    false_positive = 0
+    false_negative = 0
+
+    # calculate accuracy
     for label, words in tokens:
         prediction = predict(words, prior, likelihood)
 
-        if prediction == label:
+        if prediction == 'P' and label == 'P':
+            true_positive += 1
             correct_cnt += 1
+        elif prediction == 'N' and label == 'N':
+            true_negative += 1
+            correct_cnt += 1
+        elif prediction == 'P' and label == 'N':
+            false_positive += 1
+        else:
+            false_negative += 1
         total_cnt += 1
 
-    return (correct_cnt/total_cnt)*100
+    accuracy = (correct_cnt / total_cnt) * 100
+    precision = 100 * true_positive / (true_positive + false_positive)
+    recall = 100 * true_positive / (true_positive + false_negative)
+
+    return accuracy, precision, recall
+
+
 
 percentages = [0.05, 0.1, 1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 accuracies = []
+precisions = []
+recalls = []
 selectivities = []
 
 for percentage in percentages:
@@ -201,9 +223,16 @@ for percentage in percentages:
     test_chunks = get_chunk('test.csv')
     test_tokens, _ = tokenize(test_chunks, 100, False)
     test_tokens = featuring(test_tokens, features)
-    accuracy = calculate_accuracy(test_tokens, prior, likelihood)
+    accuracy, precision, recall = measure_performance(test_tokens, prior, likelihood)
     accuracies.append(accuracy)
     selectivities.append(selectivity)
+    precisions.append(precision)
+    recalls.append(recall)
+    #print(f"Percentage: {percentage}")
+    #print(f"-> Accuracy: {accuracy}")
+    #print(f"-> Precision: {precision}")
+    #print(f"-> Recall: {recall}")
+    #print()
 
 fig, ax1 = plt.subplots()
 
@@ -224,6 +253,15 @@ plt.title('Accuracy and Selectivity vs Training Data Percentage')
 fig.legend(loc='upper left', bbox_to_anchor=(0.1,0.9))
 plt.show()
 
+fig, ax3 = plt.subplots()
+ax3.set_xlabel('Training Data Percentage (%)')
+ax3.set_ylabel('Percentage (%)')
+ax3.plot(percentages, precisions, marker='o', color='green', label='Precision')
+ax3.plot(percentages, recalls, marker='x', color='purple', linestyle='--', label='Recall')
+ax3.set_ylim(0, 100)
+plt.title('Precision and Recall vs Training Data Percentage')
+plt.legend()
+plt.show()
 
 
 
